@@ -16,5 +16,7 @@ dependencies:
   - pillow=6.2.1
   - pip:
       - tensorflow==1.15.2
+      - tensorflow-estimator==1.15.1
       - keras==2.2.4
+      - protobuf==3.20.3     # ← add this line
       - gdown==4.7.1
