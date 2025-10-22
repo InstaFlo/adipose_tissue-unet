@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Preparing checkpoints..."
+mkdir -p checkpoints/tile_classifier_InceptionV3
+mkdir -p checkpoints/unet_1024_dilation
+
+# --- Option A: direct public links (recommended) ---
+# If you upload both weights to a public place (e.g., GitHub Release assets or S3),
+# paste those URLs below and use curl/wget:
+
+# curl -L "https://YOUR_PUBLIC_URL/tile_adipocyte.weights.h5" \
+#   -o checkpoints/tile_classifier_InceptionV3/tile_adipocyte.weights.h5
+# curl -L "https://YOUR_PUBLIC_URL/weights_loss_val.weights" \
+#   -o checkpoints/unet_1024_dilation/weights_loss_val.weights
+
+# --- Option B: Google Drive file IDs (if the files are publicly shared) ---
+# Leave these blank until you have the public IDs:
+CLASSIFIER_ID="https://drive.google.com/uc?export=download&id=1e8C3Lc0e5fdW0lwbw8Md9LKkr96wzUKA"
+UNET_ID="https://drive.google.com/uc?export=download&id=1_xB8yfXOUrrPE7-KnCEedp89e6SJVod6"
+
+if command -v gdown >/dev/null 2>&1; then
+  if [ -n "${CLASSIFIER_ID}" ]; then
+    gdown --id "${CLASSIFIER_ID}" \
+      -O checkpoints/tile_classifier_InceptionV3/tile_adipocyte.weights.h5
+  fi
+  if [ -n "${UNET_ID}" ]; then
+    gdown --id "${UNET_ID}" \
+      -O checkpoints/unet_1024_dilation/weights_loss_val.weights
+  fi
+else
+  echo "gdown not found (it should be installed via pip)."
+fi
+
+# Safety: print sizes
+ls -lh checkpoints/tile_classifier_InceptionV3 || true
+ls -lh checkpoints/unet_1024_dilation || true
+echo "postBuild done."

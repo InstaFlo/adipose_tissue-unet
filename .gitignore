@@ -1,3 +1,9 @@
 montage_imgs/
 ground_truth_annotations/
 checkpoints/
+checkpoints/
+*.h5
+*.weights
+*.zip
+*.tar
+*.tar.gz

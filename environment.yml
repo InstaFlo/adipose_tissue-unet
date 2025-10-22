@@ -17,4 +17,4 @@ dependencies:
   - pip:
       - tensorflow==1.15.2
       - keras==2.2.4
-      - mahotas==1.4.9
+      - gdown==4.7.1

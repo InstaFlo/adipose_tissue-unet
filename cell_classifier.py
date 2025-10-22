@@ -3,7 +3,6 @@ import tensorflow as tf
 tf.autograph.set_verbosity(1)
 import tensorflow as tf
 import numpy as np
-import math
 import shutil
 import random
 import argparse
@@ -13,17 +12,20 @@ import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import os
+from scipy import ndimage, misc
+import scipy.misc
 import re,glob
 import cv2
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import Flatten, Dense, AveragePooling2D
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.optimizers import RMSprop, SGD, Adam
+from keras.models import load_model
+from keras.layers import Flatten, Dense, AveragePooling2D
+from keras.models import Model, load_model
+from keras.optimizers import RMSprop, SGD, adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 
+from keras.models import load_model
 import os
-#from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import sys
 
@@ -74,8 +76,7 @@ def main():
             rescale=1./255)
 
     print('Loading model and weights from training process ...')
-    InceptionV3_model = load_model(args.weight_dir, compile=False)
-
+    InceptionV3_model = load_model(args.weight_dir)
 
 
     nbr_augmentation=1
@@ -85,9 +86,9 @@ def main():
     for idx in range(nbr_augmentation):
         print('{}th augmentation for testing ...'.format(idx))
         if idx == 0:
-            random_seed.append(np.random.randint(0, 1_000_001))
+            random_seed.append(np.random.random_integers(0, 1000000))
         else:
-            random_seed.insert(idx,np.random.randint(0, 1_000_001))
+            random_seed.insert(idx,np.random.random_integers(0, 1000000))
         test_generator = test_datagen.flow_from_directory(
                 test_data_dir,
                 target_size=(299, 299),
@@ -98,11 +99,16 @@ def main():
                 class_mode = None)
         test_image_list = test_generator.filenames
         print('Begin to predict for testing data ...')
-        steps = math.ceil(nbr_test_samples / batch_size)
         if idx == 0:
-            predictions = InceptionV3_model.predict(test_generator, steps=steps, verbose=1)
+            predictions = InceptionV3_model.predict_generator(test_generator, 
+                                                              nbr_test_samples,
+                                                              use_multiprocessing=True,
+                                                              workers=args.n_cpu)
         else:
-            predictions += InceptionV3_model.predict(test_generator, steps=steps, verbose=1)
+            predictions += InceptionV3_model.predict_generator(test_generator, 
+                                                               nbr_test_samples,
+                                                               use_multiprocessing=True, 
+                                                               workers=args.n_cpu)
 
 
     predictions /= nbr_augmentation
