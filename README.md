@@ -1,56 +1,251 @@
-# Adipocyte-U-net
+# Adipose Tissue U-Net
 
-The Adipocyte U-net is a deep U-net architecture trained to segment Adipocytes from histology imaging slides (both H&E and florescent). 
+Deep learning pipeline for automated adipocyte (fat cell) segmentation from fluorescent histology images using U-Net architecture.
 
-![alt text](overview.png)
+![Adipocyte Segmentation Overview](overview.png)
 
-### Installation instructions
+---
 
-We strongly recommend following these instructions using python 3.5+:
+## 🎯 Project Goal
 
-1. Install `virtualenv` and create a virtual environment `virtualenv unet`
-2. source the environment `source unet/bin/activate`
-3. `git clone https://github.com/GlastonburyC/Adipocyte-U-net.git`
-4. `cd Adipocyte-U-net`
-5. Install the requirements `pip install -r requirements.txt`
-6. If some installs fail, it maybe the version of OS X you're using, in that case `export MACOSX_DEPLOYMENT_TARGET=10.14` and reinstall the requirements (step 5).
+Develop an automated pipeline for quantifying adipocyte morphology in meat tissue samples using **SYBR Gold + Eosin fluorescent staining**. The system segments individual fat cells from high-resolution histology images to enable large-scale analysis of meat quality characteristics.
 
-## Tutorial examples
+**Key Applications:**
+- Automated adipocyte size and density measurements
+- Meat quality assessment and grading
+- Research into fat distribution patterns
+- High-throughput tissue analysis
 
-We have provided some small example tutorials to demonstrate both the classifier (InceptionV3) + Adipocyte U-net in action. It is neccessary to present only a handful of images, as the data we analysed in the paper poses its own engineering challenges (millions of images, several terabytes of data). However, the full data release is included at the bottom of the README, along with all network weights, images and manual annotations.
+---
 
-### Classifying cells with InceptionV3
+## 📊 Current Status
 
-_if you run the tutorials without a GPU, it will be slow (but still < 1min)_
+### ✅ Completed
+- **Dataset Pipeline**: Comprehensive preprocessing with optional stain normalization
+- **Training Framework**: TF2.13-compatible U-Net with reproducible training
+- **Evaluation System**: Multi-checkpoint evaluation with test-time augmentation
+- **Test Set Isolation**: Separate test directory ensuring no data leakage
+- **Quality Control**: Automated blur detection, white tile filtering, confidence scoring
+- **Visualization Tools**: Model comparison plots and performance tracking
 
-An example script is included that classifies 30 cells as either containing adipocytes, not_adipocytes or empty tiles.
+### 🔄 In Progress
+- Dataset builds with various preprocessing configurations
+- Model training and hyperparameter optimization
+- Comprehensive evaluation across checkpoints
 
-First download the neccessary files.
+### 📋 Roadmap
+- Enhanced visualization of segmentation results
+- Batch inference pipeline for new samples
+- Integration with downstream morphology analysis tools
 
-It can be run like so - make sure you have the network weights downloaded, they can be found here checkpoints/tile_classifier_InceptionV3/url_to_tiles:
+---
+
+## 🏗️ Repository Structure
+
+```
+adipose_tissue-unet/
+├── build_dataset.py              # Main dataset builder with stain normalization
+├── build_test_dataset.py         # Test-specific dataset builder
+├── train_adipose_unet_2.py       # TF2 training script
+├── full_evaluation.py            # Comprehensive checkpoint evaluation
+├── full_evaluation_enhanced.py   # Enhanced evaluation with TTA
+├── evaluate_all_checkpoints.py   # Batch checkpoint evaluation
+├── visualize_checkpoint_metrics.py # Training progress visualization
+├── analyze_test_set_sources.py   # Test set composition analysis
+├── run_complete_pipeline.sh      # End-to-end pipeline automation
+├── seed.csv                      # Random seed for reproducibility
+├── PIPELINE_README.md            # Detailed pipeline documentation
+│
+├── src/
+│   ├── models/
+│   │   ├── adipocyte_unet.py     # TF2.13 U-Net implementation
+│   │   └── clr_callback.py       # Cyclic learning rate scheduler
+│   └── utils/
+│       ├── data.py               # Data loading and augmentation
+│       ├── runtime.py            # TF2 GPU configuration
+│       ├── seed_utils.py         # Reproducible random seed management
+│       ├── stain_normalization.py # SYBR Gold + Eosin normalization
+│       └── stain_reference_metadata.json
+│
+├── checkpoints/                  # Model checkpoints (not in git)
+├── adipocyte_legacy_files/       # Original implementation (archived)
+└── tools/                        # Utility scripts
+```
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+**Requirements:**
+- Ubuntu 22.04 (or similar Linux)
+- Python 3.10
+- CUDA-capable GPU (recommended)
+- TensorFlow 2.13.1
 
 ```bash
-python3 cell_classifier.py --out-dir ./ \
-                           --weight_dir checkpoints/tile_classifier_InceptionV3/tile_adipocyte.weights.h5 \
-                           --image-path example_class_tiles \
-                           --n_cpu 4 \
+# Create conda environment
+conda create -n adipose-tf2 python=3.10
+conda activate adipose-tf2
+
+# Install core dependencies
+pip install tensorflow==2.13.1 keras==2.13.1
+pip install opencv-python scikit-image tifffile
+pip install matplotlib seaborn pandas tqdm
+
+# Verify GPU availability
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 ```
-This outputs a text file of probabilities of whether the network thinks the image contains adipocytes. After this step, we can keep only adipocyte tiles (given some probability threshold) and train our adipocyte U-net. Our classifier deduces 10/30 images contain adipocytes(P>0.90). We use these images downstream to perform segmentation and cell area estimate in the next tutorial.
 
-### Running the image segmentation tutorial using Binder
+### Dataset Preparation
 
-We have made this repository work with Binder. By clicking this binder logo [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/GlastonburyC/Adipocyte-U-net/master?filepath=Tutorial.ipynb)
-, a docker image will launch on the Binder website and you'll be able to use the tutorial notebook `Tutorial.ipynb` as if it were installed on your own laptop.
+**1. Build training/validation dataset with stain normalization:**
+```bash
+python build_dataset.py \
+  --stain-normalize \
+  --target-mask fat \
+  --subtract --subtract-class bubbles \
+  --min-mask-ratio 0.05 \
+  --stride 1024
+```
 
-This tutorial, `Tutorial.ipynb`, is a walk through example of how to use adipocyte U-net to perform image segmentation. In the tutorial we predict segmentations and use these predictions to obtain surface area estimates of the cell population present in the image.
-This notebook will work on either a CPU or GPU, but will be many times faster in a GPU environment.
+**2. Build dataset without stain normalization:**
+```bash
+python build_dataset.py \
+  --no-stain-normalize \
+  --target-mask fat \
+  --subtract --subtract-class bubbles \
+  --min-mask-ratio 0.05
+```
 
-All the data to reproduce the manuscript are available below:
+**Key Parameters:**
+- `--stain-normalize`: Apply SYBR Gold + Eosin color correction
+- `--subtract`: Remove bubble annotations from fat masks
+- `--min-mask-ratio`: Minimum mask coverage (default: 0.05 = 5%)
+- `--stride`: Tile stride for overlapping/non-overlapping tiles
+- `--white-ratio`, `--blur-th`: Quality filtering thresholds
 
-1. training images for classifying adipocyte containing tiles [here](https://drive.google.com/open?id=1hsmMGTQSOvicUr50fiCol_Gr5z8U0koC)
-2. trained InceptionV3 adipocyte tile classifier [weights here.](https://drive.google.com/open?id=1dGZ1amjkRfRzSO9etWwtsadylG6wGvF0)
-3. U-net weights are in /checkpoints/ folder.
-4. All annotations, training and validation images splits [here](https://drive.google.com/open?id=1MDY_CYcLSKbCrjMBvGZ5sFaqh5rRmrRk)
-5. All montage images and numpy arrays [here](https://drive.google.com/open?id=1qCb13kFdN3mxukcnz7IwfarfaZU3ygsr)
+Output: `~/Data_for_ML/Meat_Luci_Tulane/_build_YYYYMMDD_HHMMSS/`
 
-If you are predicting on your own Adipocyte images and they significantly deviate from the H&E images used here, consider fine-tuning the Adipocyte U-net, otherwise, similar to the tutorial notebook, you can use the trained weights provided here.
+### Training
+
+```bash
+python train_adipose_unet_2.py \
+  --build-dir ~/Data_for_ML/Meat_Luci_Tulane/_build_20251104_152203 \
+  --epochs 100 \
+  --batch-size 8
+```
+
+**Features:**
+- Automatic mixed-precision training
+- Cyclic learning rate scheduling
+- Data augmentation (rotation, flip, intensity)
+- Checkpointing with early stopping
+- TensorBoard logging
+
+### Evaluation
+
+**Single checkpoint evaluation:**
+```bash
+python full_evaluation.py \
+  --checkpoint checkpoints/checkpoint_20251104_120000/weights.h5 \
+  --test-dir ~/Data_for_ML/Meat_Luci_Tulane/_build_20251104_152203/dataset/test
+```
+
+**Batch evaluation across all checkpoints:**
+```bash
+python evaluate_all_checkpoints.py \
+  --checkpoints-dir checkpoints/ \
+  --test-dir ~/Data_for_ML/Meat_Luci_Tulane/_build_20251104_152203/dataset/test
+```
+
+---
+
+## 🔬 Key Features
+
+### 1. **Stain Normalization**
+- SYBR Gold + Eosin color correction using Reinhard method
+- Consistent preprocessing across batches
+- Optional - can be disabled for raw data training
+
+### 2. **Quality Filtering**
+- Blur detection via Laplacian variance
+- White tile removal (empty regions)
+- Confidence score filtering for annotations
+
+### 3. **Data Integrity**
+- Test set completely isolated in separate directory
+- No data leakage between train/val/test
+- Identical preprocessing for all splits
+- Reproducible builds with seed management
+
+### 4. **Bubble Subtraction**
+- Removes bubble annotations from fat masks
+- Ensures clean training targets
+- Morphological cleanup options
+
+### 5. **Comprehensive Evaluation**
+- Test-time augmentation (TTA) support
+- Multi-metric evaluation (Dice, IoU, Precision, Recall)
+- Visualization of predictions
+- Checkpoint comparison plots
+
+---
+
+## 📈 Dataset Statistics
+
+Typical build produces:
+- **Training**: ~60% of tiles from main directory
+- **Validation**: ~20% of tiles from main directory  
+- **Test**: ~7 separate slide images from test subdirectory
+- **Tile size**: 1024×1024 pixels
+- **Format**: JPEG (images), TIFF (masks)
+
+---
+
+## 🔧 Configuration Files
+
+### seed.csv
+```csv
+seed
+865
+```
+Central random seed for all operations ensuring reproducibility.
+
+### stain_reference_metadata.json
+Metadata for stain normalization reference images including color statistics for SYBR Gold + Eosin normalization.
+
+---
+
+## 📚 References
+
+**Original Implementation:**
+- Glastonbury et al., "Automatic Adipocyte Detection and Quantification in Histology Images Using Deep Learning"
+- GitHub: [GlastonburyC/Adipocyte-U-net](https://github.com/GlastonburyC/Adipocyte-U-net)
+
+**Architecture:**
+- Ronneberger et al., "U-Net: Convolutional Networks for Biomedical Image Segmentation" (2015)
+
+**Stain Normalization:**
+- Reinhard et al., "Color Transfer between Images" (2001)
+
+---
+
+## 📝 License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
+
+This is an active research project. For questions or collaboration inquiries, please open an issue.
+
+---
+
+## 📧 Contact
+
+Repository maintained by InstaFlo.
+
+**Binder Demo:** [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/InstaFlo/adipose_tissue-unet/main)

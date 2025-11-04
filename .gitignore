@@ -1,9 +1,50 @@
+# Data and annotation directories
 montage_imgs/
 ground_truth_annotations/
-checkpoints/
+
+# Model checkpoints (large files)
 checkpoints/
 *.h5
 *.weights
+
+# Archives
 *.zip
 *.tar
 *.tar.gz
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Analysis outputs
+model_comparison_plots/
+pre-post-processing_analysis/
+
+# Legacy files (archived examples)
+adipocyte_legacy_files/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
